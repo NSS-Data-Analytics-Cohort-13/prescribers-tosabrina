@@ -33,12 +33,15 @@ FROM zip_fips;
 
 --INITIAL ATTEMPT:
 SELECT
-	npi
-,	SUM(total_claim_count) AS sum_claims
-FROM prescription
-GROUP BY npi
-ORDER BY sum_claims DESC;
---INITIAL ANS: npi = 1881634483, # of claims = 99707
+	p1.npi
+,	CONCAT(p1.nppes_provider_first_name, ' ',p1.nppes_provider_last_org_name)
+,	MAX(p2.total_claim_count) AS max_claims
+FROM prescriber AS p1
+	INNER JOIN prescription AS p2
+		ON p1.npi = p2.npi
+GROUP BY 1, 2
+ORDER BY 3 DESC;
+--INITIAL ANS: npi = 1912011792, "DAVID COFFEY", 4538 claims
     
 --     b. Repeat the above, but this time report the nppes_provider_first_name, nppes_provider_last_org_name,  specialty_description, and the total number of claims.
 /*NOTE:
@@ -47,21 +50,19 @@ ORDER BY sum_claims DESC;
 --INITIAL ATTEMPT:
 SELECT
 	p1.npi
-,	SUM(total_claim_count) AS sum_claims
-,	p2.nppes_provider_first_name
-, 	p2.nppes_provider_last_org_name
-,	p2.specialty_description
-FROM prescription AS p1
-	INNER JOIN prescriber AS p2
+,	MAX(total_claim_count) AS MAX_claims
+,	CONCAT(p1.nppes_provider_first_name, ' ',p1.nppes_provider_last_org_name)
+,	p1.specialty_description
+FROM prescriber AS p1
+	INNER JOIN prescription AS p2
 		ON p1.npi = p2.npi
 GROUP BY 
 	p1.npi
-,	p2.nppes_provider_first_name
-, 	p2.nppes_provider_last_org_name
-,	p2.specialty_description
-ORDER BY sum_claims DESC;
+,	CONCAT(p1.nppes_provider_first_name, ' ',p1.nppes_provider_last_org_name)
+,	p1.specialty_description
+ORDER BY MAX_claims DESC;
+--INITIAL ANS: "Family Practice"
 
---INITIAL ANS:
 -- 2. 
 --     a. Which specialty had the most total number of claims (totaled over all drugs)?
 /*NOTE:
@@ -77,7 +78,8 @@ FROM prescription AS p1
 GROUP BY
 	p2.specialty_description
 ORDER BY 
-	sum_claims DESC;
+	sum_claims DESC
+LIMIT 1;
 --INITIAL ANS: "Family Practice" = 9752347
 
 --     b. Which specialty had the most total number of claims for opioids?
@@ -179,6 +181,7 @@ GROUP BY drug_name;
 /*NOTE:
 - drug, prescription --> join on drug_name
 - return: total
+- double check join: w/ SELECT * and JOIN syntax
 */
 --INITIAL ATTEMPT:
 SELECT
@@ -199,12 +202,17 @@ ORDER BY p.total_drug_cost DESC;
 -- 5. 
 --     a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 /*NOTE:
-- cbsa, COUNT
+- cbsa, fips_county 
+- fipscounty JOIN
+- COUNT
 - ILIKE '%TN'
+- 55 = correct
 */
 --INITIAL ATTEMPT:
 SELECT COUNT(*)
-FROM cbsa
+FROM cbsa AS c
+	INNER JOIN fips_county AS f
+		ON c.fipscounty = f.fipscounty
 WHERE cbsaname ILIKE '%TN';
 --INITIAL ANS: 33
 
@@ -212,15 +220,26 @@ WHERE cbsaname ILIKE '%TN';
 /*NOTE:
 - cbsa, population --> JOIN fipscounty
 - cbsaname, population
-- MAX, MIN
+- MAX, MIN?
+- can I use a subquery to return 
 */
 
 --INITIAL ATTEMPT:
 SELECT
---INITIAL ANS:
+	cbsaname
+,	population
+-- ,	MIN(population) as min_pop
+-- ,	MAX(population) AS max_pop
+FROM cbsa AS c
+	INNER JOIN population AS pop
+		ON c.fipscounty = pop.fipscounty
+-- GROUP BY cbsaname
+ORDER BY 1, 2 DESC;
+--INITIAL ANS: Largest = "Chattanooga, TN-GA" and 354589, Smallest = "Nashville-Davidson-Murfreesboro-Franklin, TN", 8773
+
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 /*NOTE:
-
+- not included, 
 */
 --INITIAL ATTEMPT:
 --INITIAL ANS:
